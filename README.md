@@ -4,7 +4,7 @@
 
 2. Download the original data from <https://jbox.sjtu.edu.cn/v/link/view/75a0931a222347e1ba2e0441407f4a1f> and place it under `./ngsim` folder
 
-3. Build NGSIM scenario with `scl scenario build --clean ./ngsim`
+3. Build NGSIM scenario with `scl scenario build --clean ./ngsim` (This will take a while)
 
 4. Generate expert demonstrations with `python example_expert_generation.py`
 
