@@ -9,3 +9,13 @@
 4. Generate expert demonstrations with `python example_expert_generation.py`
 
 5. Test rollout with `python example_rollout.py`
+
+
+# Troubleshooting
+
+1. **TypeError: export_glb() got an unexpected keyword argument 'extras'**
+  
+    Try install an alternative version of trimesh with:
+    ```bash
+    pip install trimesh==3.9.20
+    ```
