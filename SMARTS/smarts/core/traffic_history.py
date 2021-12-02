@@ -18,17 +18,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from __future__ import (
-    annotations,
-)  # to allow for typing to refer to class being defined (TrafficHistory)
-from cached_property import cached_property
-from contextlib import nullcontext, closing
-from functools import lru_cache
+# to allow for typing to refer to class being defined (TrafficHistory)
+from __future__ import annotations
+
 import logging
 import os
 import random
 import sqlite3
-from typing import Dict, Generator, NamedTuple, Set, Tuple, TypeVar
+from contextlib import closing, nullcontext
+from functools import lru_cache
+from typing import Dict, Generator, NamedTuple, Set, Tuple, Type, TypeVar
+
+from cached_property import cached_property
+
+T = TypeVar("T")
 
 
 class TrafficHistory:
@@ -54,9 +57,7 @@ class TrafficHistory:
             self._db_cnxn.close()
             self._db_cnxn = None
 
-    def _query_val(
-        self, result_type: TypeVar["T"], query: str, params: Tuple = ()
-    ) -> T:
+    def _query_val(self, result_type: Type[T], query: str, params: Tuple = ()) -> T:
         with nullcontext(self._db_cnxn) if self._db_cnxn else closing(
             sqlite3.connect(self._db)
         ) as dbcnxn:
@@ -80,6 +81,11 @@ class TrafficHistory:
             cur.close()
 
     @cached_property
+    def dataset_source(self) -> str:
+        query = "SELECT value FROM Spec where key='source'"
+        return self._query_val(str, query)
+
+    @cached_property
     def lane_width(self) -> float:
         query = "SELECT value FROM Spec where key='map_net.lane_width'"
         return self._query_val(float, query)
@@ -89,6 +95,12 @@ class TrafficHistory:
         query = "SELECT value FROM Spec where key='speed_limit_mps'"
         return self._query_val(float, query)
 
+    @cached_property
+    def ego_vehicle_id(self) -> int:
+        query = "SELECT id FROM Vehicle WHERE is_ego_vehicle = 1"
+        ego_id = self._query_val(int, query)
+        return ego_id
+
     @lru_cache(maxsize=32)
     def vehicle_final_exit_time(self, vehicle_id: str) -> float:
         query = "SELECT MAX(sim_time) FROM Trajectory WHERE vehicle_id = ?"
@@ -97,6 +109,7 @@ class TrafficHistory:
     def decode_vehicle_type(self, vehicle_type: int) -> str:
         # Options from NGSIM and INTERACTION currently include:
         #  1=motorcycle, 2=auto, 3=truck, 4=pedestrian/bicycle
+        # This actually returns a "vehicle_config_type".
         if vehicle_type == 1:
             return "motorcycle"
         elif vehicle_type == 2:
@@ -111,7 +124,7 @@ class TrafficHistory:
             )
         return "passenger"
 
-    def vehicle_type(self, vehicle_id: str) -> str:
+    def vehicle_config_type(self, vehicle_id: str) -> str:
         query = "SELECT type FROM Vehicle WHERE id = ?"
         veh_type = self._query_val(int, query, params=(vehicle_id,))
         return self.decode_vehicle_type(veh_type)
@@ -120,15 +133,17 @@ class TrafficHistory:
         # do import here to break circular dependency chain
         from smarts.core.vehicle import VEHICLE_CONFIGS
 
-        query = "SELECT length, width, type FROM Vehicle WHERE id = ?"
-        length, width, veh_type = self._query_val(tuple, query, params=(vehicle_id,))
+        query = "SELECT length, width, height, type FROM Vehicle WHERE id = ?"
+        length, width, height, veh_type = self._query_val(
+            tuple, query, params=(vehicle_id,)
+        )
         default_dims = VEHICLE_CONFIGS[self.decode_vehicle_type(veh_type)].dimensions
         if not length:
             length = default_dims.length
         if not width:
             width = default_dims.width
-        # Note: Neither NGSIM nor INTERACTION provide the vehicle height, so use our defaults
-        height = default_dims.height
+        if not height:
+            height = default_dims.height
         return length, width, height
 
     def first_seen_times(self) -> Generator[Tuple[str, float], None, None]:
@@ -161,6 +176,7 @@ class TrafficHistory:
         vehicle_type: int
         vehicle_length: float
         vehicle_width: float
+        vehicle_height: float
         position_x: float
         position_y: float
         heading_rad: float
@@ -169,7 +185,7 @@ class TrafficHistory:
     def vehicles_active_between(
         self, start_time: float, end_time: float
     ) -> Generator[TrafficHistory.VehicleRow, None, None]:
-        query = """SELECT V.id, V.type, V.length, V.width,
+        query = """SELECT V.id, V.type, V.length, V.width, V.height,
                           T.position_x, T.position_y, T.heading_rad, T.speed
                    FROM Vehicle AS V INNER JOIN Trajectory AS T ON V.id = T.vehicle_id
                    WHERE T.sim_time > ? AND T.sim_time <= ?

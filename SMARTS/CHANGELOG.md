@@ -9,6 +9,46 @@ All text added must be human-readable.
 Copy and pasting the git commit messages is __NOT__ enough.
 
 ## [Unreleased]
+### Added
+- Added a ROS wrapper/driver example to wrap SMARTS in a ROS (v1) node.
+- Added the ability to pass an optional `time_delta_since_last_step` to SMARTS' `step()` function
+  to support variable timesteps for co-simulation.
+- Added `step_count` and `elapsed_sim_time` to the `Observation` class.  See PR #974 and Issues #884 and #918.
+- Added `dt` to `Observation` class to inform users of the observations of the variable timestep.
+- Added the ability to externally update SMARTS state via a new privileged-access `ExternalProvider`.
+- Allow specifying "-latest" as a version suffix for zoo locator strings.
+- Added Base CI and dependencies requirement tests for the "darwin" platform (MacOS).
+- Extended Imitation Learning codebase to allow importing traffic histories from the Waymo motion dataset and replay in a SMARTS simulation. See PR #1060.
+- Added `ros` extension rule to `setup.py`.
+- Added a `-y` option to `utils/setup/install_deps.sh` to accept installation by default. See issue #1081.
+- Added `ParallelEnv` class and a corresponding example to simulate multiple SMARTS environments in parallel, with synchronous or asynchronous episodes.
+- Added `smarts.core.utils.import_utils` to help with the dynamic import of modules.
+- Added `single_agent` env wrapper and unit test. The wrapper converts a single-agent SMARTS environment's step and reset output to be compliant with gym spaces.
+- Added `rgb_image` env wrapper and unit test. The wrapper filters SMARTS environment observation and returns only top-down RGB image as observation.
+### Changed
+- `test-requirements` github action job renamed to `check-requirements-change` and only checks for requirements changes without failing.
+- Moved examples tests to `examples` and used relative imports to fix a module collision with `aiohttp`'s `examples` module.
+- Made changes to log sections of the scenario step in `smarts.py` to help evaluate smarts performance problems. See Issue #661.
+- Introducted `RoadMap` class to abstract away from `SumoRoadNetwork` 
+  and allow for (eventually) supporting other map formats.  See Issue #830 and PR #1048.
+  This had multiple cascading ripple effects (especially on Waypoint generation and caching,
+  Missions/Plans/Routes and road/lane-related sensors).  These include:
+    - Removed the `AgentBehavior` class and the `agent_behavior` parameter to `AgentInterface`.
+    - Moved the definition of `Waypoint` from `smarts.core.mission_planner` to `smarts.core.road_map`.
+    - Moved the definition of `Mission` and `Goal` classes from `smarts.core.scenario` to `smarts.core.plan`.
+### Fixed
+- Logic fixes to the `_snap_internal_holes` and `_snap_external_holes` methods in `smarts.core.sumo_road_network.py` for crude geometry holes of sumo road map. Re-adjusted the entry position of vehicles in `smarts.sstudio.genhistories.py` to avoid false positive events. See PR #992. 
+- Prevent `test_notebook.ipynb` cells from timing out by increasing time to unlimited using `/metadata/execution/timeout=-1` within the notebook for regular uses, and `pytest` call with `--nb-exec-timeout -1` option for tests. See for more details: "https://jupyterbook.org/content/execute.html#setting-execution-timeout" and "https://pytest-notebook.readthedocs.io/en/latest/user_guide/tutorial_intro.html#pytest-fixture".
+- Stop `multiprocessing.queues.Queue` from throwing an error by importing `multiprocessing.queues` in `envision/utils/multiprocessing_queue.py`.
+- Prevent vehicle insertion on top of ignored social vehicles when the `TrapManager` defaults to emitting a vehicle for the ego to control. See PR #1043
+- Prevent `TrapManager`from trapping vehicles in Bubble airlocks.  See Issue #1064.
+- Social-agent-buffer is instantiated only if the scenario requires social agents
+- Mapped Polygon object output of Route.geometry() to sequence of coordinates.
+- Updated deprecated Shapely functionality.
+### Deprecated
+- The `timestep_sec` property of SMARTS is being deprecated in favor of `fixed_timesep_sec`
+  for clarity since we are adding the ability to have variable time steps.
+### Removed
 
 ## [0.4.18] - 2021-07-22
 ### Added 
@@ -27,7 +67,7 @@ Copy and pasting the git commit messages is __NOT__ enough.
 ### Added 
 - Added `ActionSpace.Imitation` and a controller to support it.  See Issue #844.
 - Added a `TraverseGoal` goal for imitation learning agents.  See Issue #848.
-- Added README_pypi.md to update to the general user installation PyPI instructions. See Issue #828. 
+- Added `README_pypi.md` to update to the general user installation PyPI instructions. See Issue #828. 
 - Added a new utility experiment file `cli/run.py` to replace the context given by `supervisord.conf`. See PR #911.
 - Added `scl zoo install` command to install zoo policy agents at the specified paths. See Issue #603.
 - Added a `FrameStack` wrapper which returns stacked observations for each agent.
@@ -54,7 +94,7 @@ Copy and pasting the git commit messages is __NOT__ enough.
 - Fixed an args count error caused by `websocket.on_close()` sending a variable number of args.
 - Fixed the multi-instance display of `envision`. See Issue #784.
 - Caught abrupt terminate signals, in order to shutdown zoo manager and zoo workers.
-## Removed
+### Removed
 - Removed `pview` from `make` as it refers to `.egg` file artifacts that we no longer keep around.
 - Removed `supervisord.conf` and `supervisor` from dependencies and requirements. See Issue #802.
 
@@ -90,7 +130,7 @@ process
 - Running imitation learning will now create a cached `history_mission.pkl` file in scenario folder that stores 
 the missions for all agents.
 - Added ijson as a dependency. 
-- Added `cached_property` as a dependency.
+- Added `cached-property` as a dependency.
 ### Changed
 - Lowered CPU cost of waypoint generation. This will result in a small increase in memory usage.
 - Set the number of processes used in `make test` to ignore 2 CPUs if possible.

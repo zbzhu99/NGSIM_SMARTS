@@ -19,9 +19,8 @@
 # THE SOFTWARE.
 
 
-from __future__ import (  # to allow for typing to refer to class being defined (Renderer)
-    annotations,
-)
+# to allow for typing to refer to class being defined (Renderer)
+from __future__ import annotations
 
 import importlib.resources as pkg_resources
 import logging
@@ -51,7 +50,7 @@ from .scenario import Scenario
 
 
 class _ShowBaseInstance(ShowBase):
-    """Wraps a singleton instance of ShowBase from Panda3D."""
+    """ Wraps a singleton instance of ShowBase from Panda3D. """
 
     def __new__(cls):
         # Singleton pattern:  ensure only 1 ShowBase instance
@@ -140,7 +139,7 @@ class Renderer:
         self._simid = simid
         self._root_np = None
         self._vehicles_np = None
-        self._road_network_np = None
+        self._road_map_np = None
         self._vehicle_nodes = {}
         # Note: Each instance of the SMARTS simulation will have its own Renderer,
         # but all Renderer objects share the same ShowBaseInstance.
@@ -155,17 +154,17 @@ class Renderer:
         self._vehicles_np = self._root_np.attachNewNode("vehicles")
 
         map_path = scenario.map_glb_filepath
-        if self._road_network_np:
+        if self._road_map_np:
             self._log.debug(
-                "road_network={} already exists. Removing and adding a new "
-                "one from glb_path={}".format(self._road_network_np, map_path)
+                "road_map={} already exists. Removing and adding a new "
+                "one from glb_path={}".format(self._road_map_np, map_path)
             )
         map_np = self._showbase_instance.loader.loadModel(map_path, noCache=True)
-        np = self._root_np.attachNewNode("road_network")
+        np = self._root_np.attachNewNode("road_map")
         map_np.reparent_to(np)
         np.hide(RenderMasks.OCCUPANCY_HIDE)
         np.setColor(SceneColors.Road.value)
-        self._road_network_np = np
+        self._road_map_np = np
 
         self._is_setup = True
 
@@ -174,7 +173,7 @@ class Renderer:
         self._showbase_instance.render_node(self._root_np)
 
     def step(self):
-        """provided for non-SMARTS uses; normally not used by SMARTS."""
+        """ provided for non-SMARTS uses; normally not used by SMARTS. """
         self._showbase_instance.taskMgr.step()
 
     def teardown(self):
@@ -183,7 +182,7 @@ class Renderer:
             self._root_np.removeNode()
             self._root_np = None
         self._vehicles_np = None
-        self._road_network_np = None
+        self._road_map_np = None
         self._is_setup = False
 
     def destroy(self):
@@ -204,7 +203,7 @@ class Renderer:
         self._vehicle_nodes[vid] = node_path
 
     def begin_rendering_vehicle(self, vid: str, is_agent: bool):
-        """adds the vehicle node to the scene graph"""
+        """ adds the vehicle node to the scene graph """
         vehicle_path = self._vehicle_nodes.get(vid, None)
         if not vehicle_path:
             self._log.warning(f"Renderer ignoring invalid vehicle id: {vid}")
