@@ -27,7 +27,7 @@ docker run -it -v $PWD:/src -p 8081:8081 --name <your_container_name> ngsim bash
 
 Then you can continue from Step 2 inside the docker container.
 
-
+<!-- 
 # Troubleshooting
 
 1. **TypeError: export_glb() got an unexpected keyword argument 'extras'**
@@ -35,4 +35,4 @@ Then you can continue from Step 2 inside the docker container.
     Try install an alternative version of trimesh with:
     ```bash
     pip install trimesh==3.9.20
-    ```
+    ``` -->
