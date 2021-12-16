@@ -3,6 +3,8 @@ import numpy as np
 import pickle
 import argparse
 
+from example_adapter import get_observation_adapter
+
 from smarts.core.smarts import SMARTS
 from smarts.core.scenario import Scenario
 from smarts.core.agent import AgentSpec
@@ -41,7 +43,7 @@ def cal_action(obs, obs_next, dt=0.1):
     return act
 
 
-def main(scenario):
+def main(scenario, obs_stack_size=1):
     """Collect expert observations.
 
     Each input scenario is associated with some trajectory files. These trajectories
@@ -64,7 +66,8 @@ def main(scenario):
             rgb=False,
             lidar=False,
             action=ActionSpaceType.Imitation,
-        )
+        ),
+        observation_adapter=get_observation_adapter(obs_stack_size),
     )
 
     smarts = SMARTS(
@@ -124,11 +127,12 @@ def main(scenario):
         # handle observations
         cars = obs.keys()
         for car in cars:
+            _obs = agent_spec.observation_adapter(obs[car])
             if cars_obs.__contains__(car):
-                cars_obs[car].append(obs[car])
+                cars_obs[car].append(_obs)
                 cars_terminals[car].append(dones[car])
             else:
-                cars_obs[car] = [obs[car]]
+                cars_obs[car] = [_obs]
                 cars_terminals[car] = [dones[car]]
 
     for car in cars_obs:

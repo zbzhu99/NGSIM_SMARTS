@@ -1,5 +1,6 @@
 import numpy as np
 from dataclasses import replace
+from example_adapter import get_observation_adapter
 
 from smarts.core.smarts import SMARTS
 from smarts.core.agent import AgentSpec
@@ -18,10 +19,10 @@ def get_action_adapter():
 
 
 class TrafficSim:
-    def __init__(self, scenarios):
+    def __init__(self, scenarios, obs_stacked_size=1):
         self.scenarios_iterator = Scenario.scenario_variations(scenarios, [])
         self._init_scenario()
-        self.obs_stacked_size = 1
+        self.obs_stacked_size = obs_stacked_size
         self.agent_spec = AgentSpec(
             interface=AgentInterface(
                 max_episode_steps=None,
@@ -33,6 +34,7 @@ class TrafficSim:
                 action=ActionSpaceType.Imitation,
             ),
             action_adapter=get_action_adapter(),
+            observation_adapter=get_observation_adapter(obs_stacked_size),
         )
 
         self.smarts = SMARTS(
@@ -50,10 +52,14 @@ class TrafficSim:
             {self.vehicle_id: self.agent_spec.action_adapter(action)}
         )
 
+        observation = self.agent_spec.observation_adapter(
+            observations[self.vehicle_id]
+        )
+
         return (
-            observations[self.vehicle_id],
+            observation,
             rewards[self.vehicle_id],
-            dones[self.vehicle_id],
+            {"__all__": dones[self.vehicle_id]},
             {},
         )
 
@@ -75,8 +81,11 @@ class TrafficSim:
         self.smarts.switch_ego_agents({self.vehicle_id: self.agent_spec.interface})
 
         observations = self.smarts.reset(self.scenario)
+        observation = self.agent_spec.observation_adapter(
+            observations[self.vehicle_id]
+        )
         self.vehicle_itr += 1
-        return observations[self.vehicle_id]
+        return observation
 
     def _init_scenario(self):
         self.scenario = next(self.scenarios_iterator)
@@ -85,6 +94,6 @@ class TrafficSim:
         np.random.shuffle(self.vehicle_ids)
         self.vehicle_itr = 0
 
-    def destroy(self):
+    def close(self):
         if self.smarts is not None:
             self.smarts.destroy()
