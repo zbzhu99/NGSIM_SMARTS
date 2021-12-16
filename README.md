@@ -10,7 +10,7 @@ Step 3. Build NGSIM scenario with `scl scenario build --clean ./ngsim` (This wil
 
 Step 4. Generate expert demonstrations with `python example_expert_generation.py`
 
-Step 5. Test rollout with `python example_rollout.py`
+Step 5. Test rollout with `python example_rollout.py` (Alternatively, to accelerate sampling, you can check `parallel_rollout.py`.)
 
 # Setup using Docker
 
