@@ -134,7 +134,7 @@ class MATrafficSim:
         self.vehicle_ids = list(self.vehicle_missions.keys())
         for id in range(len(self.vehicle_ids)):
             self.vehicle_ids[id] = f"{vlist[id][0]}"
-        self.vehicle_itr = 0
+        self.vehicle_itr = np.random.choice(len(self.vehicle_ids))
 
     def close(self):
         if self.smarts is not None:
