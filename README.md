@@ -1,5 +1,7 @@
 # How to run
 
+Step 0. Download the SMARTS submodule with `git submodule init & git submodule update`
+
 Step 1. Install SMARTS following the instructions in `./SMARTS` folder
 
 Step 2. Download the original data from <https://jbox.sjtu.edu.cn/v/link/view/75a0931a222347e1ba2e0441407f4a1f> and place it under `./ngsim` folder
