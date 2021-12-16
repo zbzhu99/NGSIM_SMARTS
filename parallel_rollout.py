@@ -10,7 +10,7 @@ sys.setrecursionlimit(25000)
 
 if __name__ == "__main__":
     env_num = 2
-    env_creator = lambda: TrafficSim(["/NAS2020/Workspaces/DRLGroup/zbzhu/MADPO/SMARTS_Imitation/smarts-imitation/ngsim"])
+    env_creator = lambda: TrafficSim(["./ngsim"])
     vector_env = ParallelEnv([env_creator] * env_num, auto_reset=True)
 
     vec_obs = vector_env.reset()

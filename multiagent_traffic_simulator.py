@@ -1,12 +1,15 @@
 import numpy as np
 from dataclasses import replace
 
+from example_adapter import get_observation_adapter
+
 from smarts.core.smarts import SMARTS
 from smarts.core.agent import AgentSpec
 from smarts.core.agent_interface import AgentInterface
 from smarts.core.controllers import ActionSpaceType
 from smarts.core.scenario import Scenario
 from smarts.core.traffic_history_provider import TrafficHistoryProvider
+from smarts.env.wrappers.parallel_env import ParallelEnv
 
 
 def get_action_adapter():
@@ -18,10 +21,10 @@ def get_action_adapter():
 
 
 class MATrafficSim:
-    def __init__(self, scenarios, agent_number):
+    def __init__(self, scenarios, agent_number, obs_stacked_size=1):
         self.scenarios_iterator = Scenario.scenario_variations(scenarios, [])
         self._init_scenario()
-        self.obs_stacked_size = 1
+        self.obs_stacked_size = obs_stacked_size
         self.n_agents = agent_number
         self.agentid_to_vehid = {}
         self.agent_ids = [f"agent_{i}" for i in range(self.n_agents)]
@@ -36,6 +39,7 @@ class MATrafficSim:
                 action=ActionSpaceType.Imitation,
             ),
             action_adapter=get_action_adapter(),
+            observation_adapter=get_observation_adapter(obs_stacked_size),
         )
 
         self.smarts = SMARTS(
@@ -55,6 +59,13 @@ class MATrafficSim:
             action[agent_id] = self.agent_spec.action_adapter(agent_action)
         observations, rewards, dones, _ = self.smarts.step(action)
         info = {}
+
+        for k in observations.keys():
+            observations[k] = self.agent_spec.observation_adapter(
+                observations[k]
+            )
+
+        dones["__all__"] = all(dones.values())
 
         return (
             observations,
@@ -100,6 +111,10 @@ class MATrafficSim:
         self.smarts.switch_ego_agents(agent_interfaces)
 
         observations = self.smarts.reset(self.scenario)
+        for k in observations.keys():
+            observations[k] = self.agent_spec.observation_adapter(
+                observations[k]
+            )
 
         return observations
 
@@ -121,16 +136,17 @@ class MATrafficSim:
             self.vehicle_ids[id] = f"{vlist[id][0]}"
         self.vehicle_itr = 0
 
-    def destroy(self):
+    def close(self):
         if self.smarts is not None:
             self.smarts.destroy()
 
 
 if __name__ == "__main__":
-    env = MATrafficSim(["./ngsim"], agent_number=10)
+    """ Dummy Rollout """
+    env = MATrafficSim(["./ngsim"], agent_number=5)
     obs = env.reset()
     done = {}
-    n_steps = 100
+    n_steps = 10
     for step in range(n_steps):
         act_n = {}
         for agent_id in obs.keys():
@@ -140,3 +156,20 @@ if __name__ == "__main__":
         obs, rew, done, info = env.step(act_n)
         print(rew)
     print("finished")
+    env.close()
+
+    """ Parallel Rollout """
+    env_num = 2
+    env_creator = lambda: MATrafficSim(["./ngsim"], agent_number=5)
+    vector_env = ParallelEnv([env_creator] * env_num, auto_reset=True)
+
+    vec_obs = vector_env.reset()
+
+    vec_act = []
+    for obs in vec_obs:
+        vec_act.append({a_id: np.random.normal(0, 1, size=(2,)) for a_id in obs.keys()})
+
+    vec_next_obs, vec_rew, vec_done, vec_info = vector_env.step(vec_act)
+
+    print("parallel finished!")
+    vector_env.close()
