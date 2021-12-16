@@ -11,3 +11,4 @@ if __name__ == "__main__":
     obs, rew, done, info = env.step(act)
 
     print("finished")
+    env.close()
