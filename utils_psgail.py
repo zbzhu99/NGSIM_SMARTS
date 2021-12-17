@@ -5,17 +5,20 @@ from multiagent_traffic_simulator import MATrafficSim
 from smarts.env.wrappers.parallel_env import ParallelEnv
 import random
 import matplotlib.pyplot as plt
+import time
 
 # Increase system recursion limit
 sys.setrecursionlimit(25000)
 device1 = "cuda:0"
 device0 = "cpu"
 
+
 def getlist(list_, idx):
     if idx < 0 or idx >= len(list_) or len(list_) == 0:
         return None
     else:
         return list_[idx]
+
 
 def smooth_curve(y, smooth):
     r = smooth
@@ -26,16 +29,17 @@ def smooth_curve(y, smooth):
                 y[i] = y[i - 1] * r + y[i] * (1 - r)
     return y
 
+
 def moving_average(y, x=None, total_steps=100, smooth=0.9, move_max=False):
     if isinstance(y, list):
         y = np.array(y)
     length = int(np.prod(y.shape))
     if x is None:
-        x = list(range(1, length+1))
+        x = list(range(1, length + 1))
     if isinstance(x, list):
         x = np.array(x)
     if length > total_steps:
-        block_size = length//total_steps
+        block_size = length // total_steps
         select_list = list(range(0, length, block_size))
         select_list = select_list[:-1]
         y = y[:len(select_list) * block_size].reshape(-1, block_size)
@@ -46,8 +50,10 @@ def moving_average(y, x=None, total_steps=100, smooth=0.9, move_max=False):
         x = x[select_list]
     y = smooth_curve(y, smooth)
     return y, x
+
+
 def plotReward(infos):
-    x, y = infos["episodes"],infos["rewards"]
+    x, y = infos["episodes"], infos["rewards"]
     y, x = moving_average(y, x)
     plt.xlabel("Episode")
     plt.ylabel("Reward")
@@ -143,6 +149,7 @@ def sampling(psgail, vector_env, batch_size):
         act_idx = 0
         prob = prob.to(device0)
         acts = acts.to(device0)
+        # time1 = time.time()
         for idx, obs in enumerate(vec_obs):
             act_n = {}
             for agent_id in obs.keys():
@@ -152,9 +159,15 @@ def sampling(psgail, vector_env, batch_size):
                 act_n[agent_id] = act_tmp.numpy()
                 act_idx += 1
             vec_act.append(act_n)
+        # time2 = time.time()
+        # print('obs vector extract:', time2 - time1)
         probs.append(prob)
         actions.append(acts)
+        # time1 = time.time()
         vec_obs, vec_rew, vec_done, vec_info = vector_env.step(vec_act)
+        # time2 = time.time()
+        # print('env interact:', time2 - time1)
+        # time1 = time.time()
         for idx, act_n in enumerate(vec_act):
             for agent_id in act_n.keys():
                 obs_vectors = obs_extractor(vec_obs[idx].get(agent_id))
@@ -162,10 +175,11 @@ def sampling(psgail, vector_env, batch_size):
                 rewards.append(vec_rew[idx].get(agent_id))
                 dones.append(vec_done[idx].get(agent_id))
                 counter += 1
+        # time2 = time.time()
+        # print('information gathering:', time2 - time1)
         if counter >= batch_size:
             break
     return states, next_states, actions, probs, dones, rewards
-
 
 # def sampling(psgail, sap_size=10000, env_num=12, agent_number=10):
 #     env_creator = lambda: MATrafficSim(["./ngsim"], agent_number=agent_number)
