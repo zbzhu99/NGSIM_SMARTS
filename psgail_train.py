@@ -2,7 +2,7 @@ from psgail import *
 from utils_psgail import *
 import pickle as pk
 import os
-
+import time
 
 def train(psgail, experts, stage, i_episode_res, num_episode=1000, print_every=10, gamma=0.95, batch_size=10000,
           agent_num=10, mini_epoch=3):
@@ -11,13 +11,13 @@ def train(psgail, experts, stage, i_episode_res, num_episode=1000, print_every=1
     env_creator = lambda: MATrafficSim(["./ngsim"], agent_number=agent_num)
     vector_env = ParallelEnv([env_creator] * 12, auto_reset=True)
     for i_episode in range(i_episode_res, num_episode):
-        if i_episode % 200 == 0:
+        if i_episode % 200 == 0 and i_episode != 0:
             agent_num += 10
             vector_env.close()
             env_creator = lambda: MATrafficSim(["./ngsim"], agent_number=agent_num)
             vector_env = ParallelEnv([env_creator] * 12, auto_reset=True)
-        if i_episode % 50 == 0:
-            with open('psgail_' + str(int(i_episode / 50)) + '_' + stage + '.model',
+        if i_episode % 50 == 0 and i_episode != 0:
+            with open('./models/psgail_' + str(int(i_episode / 50)) + '_' + stage + '.model',
                       "wb") as f:
                 pk.dump(
                     {
@@ -30,8 +30,10 @@ def train(psgail, experts, stage, i_episode_res, num_episode=1000, print_every=1
                     },
                     f,
                 )
-
+        time1 = time.time()
         states, next_states, actions, probs, dones, rewards = sampling(psgail, vector_env, batch_size=batch_size)
+        time2 = time.time()
+        print('sampling complete, time cost', time2-time1, 's')
         rewards_log.append(np.sum(rewards))
         episodes_log.append(i_episode)
         batch = trans2tensor({"state": states, "action": actions,
@@ -63,7 +65,7 @@ if __name__ == "__main__":
     experts = np.load('experts.npy')
 
     infos_1 = train(psgail, experts, 'train', 0, num_episode=train_episodes, print_every=100, gamma=0.95,
-                    batch_size=100,
+                    batch_size=40000,
                     agent_num=10, mini_epoch=3)
 
     plt.title('Reinforce training on {}'.format(env_name))

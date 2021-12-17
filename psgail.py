@@ -174,15 +174,18 @@ class PSGAIL():
         D_agents = self.discriminator(sap_agents)
         grad_penalty = self.grad_penalty(sap_agents.data, sap_experts.data)
         discriminator_loss = D_agents.mean() - D_expert.mean() + grad_penalty
+        # discriminator_loss = D_agents.mean() - D_expert.mean()
         self.discriminator_optimizer.zero_grad()
-        # discriminator_loss.backward(retain_graph=True)
         discriminator_loss.backward()
+        # discriminator_loss.backward()
         self.discriminator_optimizer.step()
 
         agents_rew = (D_agents - D_agents.mean()) / (D_agents.std() + 1e-8)
         td_target = agents_rew.detach() + gamma * self.target_value(s1) * (1 - done)
         td_delta = td_target - self.value(s)
+
         log_prob, cur_prob, action = self.get_action(s, a)
+        old_prob = old_prob.detach()
         ip_sp = cur_prob / (old_prob + 1e-7)
         ip_sp_clip = torch.clamp(ip_sp, 1 - self._clip_range, 1 + self._clip_range)
         policy_loss = -torch.mean(torch.min(ip_sp * td_delta.detach(), ip_sp_clip * td_delta.detach()))
