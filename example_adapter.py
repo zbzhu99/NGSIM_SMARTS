@@ -5,7 +5,7 @@ import utils
 def get_observation_adapter(obs_stack_size):
     stack_size = obs_stack_size
     # look_ahead = 10
-    closest_neighbor_num = 6
+    closest_neighbor_num = 8
     img_resolution = 40
     observe_lane_num = 3
 

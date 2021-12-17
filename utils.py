@@ -158,6 +158,9 @@ class CalObs:
         surrounding_vehicles = _get_closest_vehicles(
             ego, neighbor_vehicle_states, n=closest_neighbor_num
         )
+        ego_pos = ego.position[:2]
+        ego_heading = np.asarray(float(ego.heading))
+        ego_speed = np.asarray(ego.speed)
         for i, v in surrounding_vehicles.items():
             if v[0] is None:
                 v = ego
@@ -168,10 +171,9 @@ class CalObs:
             heading = np.asarray(float(v.heading))
             speed = np.asarray(v.speed)
 
-            features[i, :] = np.asarray([pos[0], pos[1], heading, speed])
-
+            features[i, :] = np.asarray([pos[0]-ego_pos[0], pos[1]-ego_pos[1], heading-ego_heading, speed-ego_speed])
         return features.reshape((-1,))
-
+        # return None
     @staticmethod
     def cal_ego_lane_dist_and_speed(env_obs: Observation, **kwargs):
         """Calculate the distance from ego vehicle to its front vehicles (if have) at observed lanes,

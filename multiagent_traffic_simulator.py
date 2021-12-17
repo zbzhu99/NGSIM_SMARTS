@@ -10,6 +10,8 @@ from smarts.core.controllers import ActionSpaceType
 from smarts.core.scenario import Scenario
 from smarts.core.traffic_history_provider import TrafficHistoryProvider
 from smarts.env.wrappers.parallel_env import ParallelEnv
+import datetime
+import random
 
 
 def get_action_adapter():
@@ -49,7 +51,8 @@ class MATrafficSim:
         )
 
     def seed(self, seed):
-        np.random.seed(seed)
+        random.seed(datetime.datetime.now())
+        np.random.seed(random.randint(1, 100))
 
     def step(self, action):
         for agent_id in self.agent_ids:
@@ -143,7 +146,7 @@ class MATrafficSim:
 
 if __name__ == "__main__":
     """ Dummy Rollout """
-    env = MATrafficSim(["./ngsim"], agent_number=5)
+    env = MATrafficSim(["./ngsim"], agent_number=10)
     obs = env.reset()
     done = {}
     n_steps = 10
