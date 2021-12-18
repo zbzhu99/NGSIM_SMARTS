@@ -50,6 +50,7 @@ SPACE_LIB = dict(
     #     low=-1e2, high=1e2, shape=shape
     # ),
     img_gray=lambda shape: gym.spaces.Box(low=0.0, high=1.0, shape=shape),
+
 )
 
 

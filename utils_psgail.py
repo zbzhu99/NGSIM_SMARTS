@@ -135,16 +135,24 @@ def sampling(psgail, vector_env, batch_size):
     probs = []
     dones = []
     counter = 0
+    agents_buffer = {}
+    for i in range(12):
+        agents_buffer[i] = {}
+    total_agent_num = 0
     while True:
         vec_act = []
         obs_vectors = np.zeros((1, 36))
         for idx, obs in enumerate(vec_obs):
             for agent_id in obs.keys():
+                if agent_id not in agents_buffer[idx]:
+                    agents_buffer[idx][agent_id] = 1
+                    total_agent_num += 1
                 if getlist(vec_done, idx) is not None and vec_done[idx].get(agent_id):
+                    del agents_buffer[idx][agent_id]
                     continue
                 obs_vectors = np.vstack((obs_vectors, obs_extractor(obs[agent_id])))
                 states.append(obs_vectors[-1, :])
-        obs_vectors = torch.tensor([obs_vectors[1:]], device=device1, dtype=torch.float32)
+        obs_vectors = torch.tensor([obs_vectors[1:, :]], device=device1, dtype=torch.float32)
         log_prob, prob, acts = psgail.get_action(obs_vectors.squeeze())
         act_idx = 0
         prob = prob.to(device0)
@@ -179,44 +187,45 @@ def sampling(psgail, vector_env, batch_size):
         # print('information gathering:', time2 - time1)
         if counter >= batch_size:
             break
-    return states, next_states, actions, probs, dones, rewards
+    return states, next_states, actions, probs, dones, rewards, total_agent_num
 
-# def sampling(psgail, sap_size=10000, env_num=12, agent_number=10):
-#     env_creator = lambda: MATrafficSim(["./ngsim"], agent_number=agent_number)
-#     vector_env = ParallelEnv([env_creator] * env_num, auto_reset=True)
-#     vec_obs = vector_env.reset()
-#     vec_done = []
-#     states = []
-#     acts = []
-#     rewards = []
-#     next_states = []
-#     probs = []
-#     dones = []
-#     while True:
-#         vec_act = []
-#         for idx, obs in enumerate(vec_obs):
-#             act_n = {}
-#             obs_vectors = {}
-#             for agent_id in obs.keys():
-#                 if (getlist(vec_done, idx) is not None and vec_done[idx][agent_id]):
-#                     continue
-#                 obs_vectors[agent_id] = obs_extractor(obs[agent_id])
-#                 states.append(obs_vectors)
-#                 log_prob, prob, act_n[agent_id] = psgail.get_action(obs_vectors)
-#                 acts.append(act_n[agent_id])
-#                 probs.append(prob)
-#             vec_act.append(act_n)
-#         vec_obs, vec_rew, vec_done, vec_info = vector_env.step(vec_act)
-#         for idx, obs in enumerate(vec_obs):
-#             for agent_id in vec_act[idx].keys():
-#                 obs_vectors = obs_extractor(vec_obs[idx].get(agent_id))
-#                 next_states.append(obs_vectors)
-#                 rewards.append(vec_rew[idx].get(agent_id))
-#                 dones.append(vec_done[idx].get(agent_id))
-#         if len(dones) >= sap_size:
-#             break
-#     vector_env.close()
-#     return states, next_states, acts, probs, dones, rewards
+
+def evaluating(psgail, sap_size=10000, env_num=12, agent_number=10):
+    env_creator = lambda: MATrafficSim(["./ngsim"], agent_number=agent_number)
+    vector_env = ParallelEnv([env_creator] * env_num, auto_reset=True)
+    vec_obs = vector_env.reset()
+    vec_done = []
+    states = []
+    acts = []
+    rewards = []
+    next_states = []
+    probs = []
+    dones = []
+    while True:
+        vec_act = []
+        for idx, obs in enumerate(vec_obs):
+            act_n = {}
+            obs_vectors = {}
+            for agent_id in obs.keys():
+                if (getlist(vec_done, idx) is not None and vec_done[idx][agent_id]):
+                    continue
+                obs_vectors[agent_id] = obs_extractor(obs[agent_id])
+                states.append(obs_vectors)
+                log_prob, prob, act_n[agent_id] = psgail.get_action(obs_vectors)
+                acts.append(act_n[agent_id])
+                probs.append(prob)
+            vec_act.append(act_n)
+        vec_obs, vec_rew, vec_done, vec_info = vector_env.step(vec_act)
+        for idx, obs in enumerate(vec_obs):
+            for agent_id in vec_act[idx].keys():
+                obs_vectors = obs_extractor(vec_obs[idx].get(agent_id))
+                next_states.append(obs_vectors)
+                rewards.append(vec_rew[idx].get(agent_id))
+                dones.append(vec_done[idx].get(agent_id))
+        if len(dones) >= sap_size:
+            break
+    vector_env.close()
+    return states, next_states, acts, probs, dones, rewards
 
 # def assign_neighbors(neighbors, targets, relative_pos, idx):
 #     if abs(relative_pos[0]) < abs(targets[1]):
