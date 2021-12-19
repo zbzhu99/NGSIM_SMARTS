@@ -104,7 +104,7 @@ class MATrafficSim:
         self.smarts.switch_ego_agents(agent_interfaces)
 
         observations = self.smarts.reset(self.scenario)
-
+        self.vehicle_itr += self.n_agents
         return observations
 
         # modified_mission = replace(vehicle_mission, start_time=0.0)
