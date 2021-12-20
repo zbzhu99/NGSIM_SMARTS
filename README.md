@@ -29,6 +29,17 @@ docker run -it -v $PWD:/src -p 8081:8081 --name <your_container_name> ngsim bash
 
 Then you can continue from Step 2 inside the docker container.
 
+
+# Benchmark your policy
+
+We provide a benchmark script for you to evaluate your model locally. Now the example script is just performing random actions policy, you can customize for your own policy models.
+
+You can run the script with the following command:
+
+```bash
+python benchmark/benchmark.py <path_to_your_ngsim_scenario> --env_num 10
+```
+
 <!-- 
 # Troubleshooting
 
