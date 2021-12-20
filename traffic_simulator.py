@@ -48,19 +48,22 @@ class TrafficSim:
 
     def step(self, action):
 
-        observations, rewards, dones, _ = self.smarts.step(
+        raw_observations, rewards, dones, _ = self.smarts.step(
             {self.vehicle_id: self.agent_spec.action_adapter(action)}
         )
 
         observation = self.agent_spec.observation_adapter(
-            observations[self.vehicle_id]
+            raw_observations[self.vehicle_id]
         )
 
         return (
             observation,
             rewards[self.vehicle_id],
             {"__all__": dones[self.vehicle_id]},
-            {},
+            {
+                "vehicle_id": self.vehicle_id,
+                "reached_goal": raw_observations[self.vehicle_id].events.reached_goal,
+            },
         )
 
     def reset(self):
@@ -80,9 +83,9 @@ class TrafficSim:
         self.scenario.set_ego_missions({self.vehicle_id: modified_mission})
         self.smarts.switch_ego_agents({self.vehicle_id: self.agent_spec.interface})
 
-        observations = self.smarts.reset(self.scenario)
+        raw_observations = self.smarts.reset(self.scenario)
         observation = self.agent_spec.observation_adapter(
-            observations[self.vehicle_id]
+            raw_observations[self.vehicle_id]
         )
         self.vehicle_itr += 1
         return observation
