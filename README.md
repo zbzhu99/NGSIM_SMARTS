@@ -1,6 +1,6 @@
 # How to run
 
-Step 0. Download the SMARTS submodule with `git submodule init & git submodule update`
+Step 0. Download the SMARTS submodule with `git submodule init & git submodule update`, **make sure your SMARTS is at the right commit id (46c3497)**
 
 Step 1. Install SMARTS following the instructions in `./SMARTS` folder
 

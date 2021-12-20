@@ -115,6 +115,7 @@ class MATrafficSim:
             observations[k] = self.agent_spec.observation_adapter(
                 observations[k]
             )
+        self.vehicle_itr += self.n_agents
 
         return observations
 
