@@ -56,7 +56,7 @@ COPY ./SMARTS/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Copy source files and install SMARTS
-ENV PYTHONPATH=/src
+ENV PYTHONPATH=/src/SMARTS
 COPY . /src
 WORKDIR /src/SMARTS
 RUN pip install --no-cache-dir -e .[train,test,dev,camera-obs] \
