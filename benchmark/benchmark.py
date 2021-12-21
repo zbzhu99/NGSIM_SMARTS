@@ -40,8 +40,8 @@ def compute_metrics(rollout_trajs, ngsim_path):
     def _compute_distance_travelled(sample_traj):
         # NOTE(zbzhu): we only care about the distance in horizontal direction
         distance_travelled = abs(
-            sample_traj["observations"][-1]["ego_pos"][0]
-            - sample_traj["observations"][0]["ego_pos"][0]
+            sample_traj["observations"][-1]["ego_pos"][0][0]
+            - sample_traj["observations"][0]["ego_pos"][0][0]
         )
         return distance_travelled
 
