@@ -93,7 +93,7 @@ class MATrafficSim:
         agent_interfaces = {a_id: self.agent_spec.interface for a_id in self.agent_ids}
 
         if internal_replacement:
-            # NOTE(zbzhu): we use the first-end vehicle to compute the end time since we want to make sure all vehicles can exist on the map
+            # NOTE(zbzhu): we use the first-end vehicle to compute the end time to make sure all vehicles can exist on the map
             history_end_time = min(
                 [
                     self.scenario.traffic_history.vehicle_final_exit_time(v_id)
@@ -108,7 +108,6 @@ class MATrafficSim:
                 )
                 / 10
             )
-            traffic_history_provider.start_time = history_start_time + alive_time
         else:
             traffic_history_provider.start_time = history_start_time
 
