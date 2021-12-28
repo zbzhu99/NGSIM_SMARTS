@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import replace
 
 from example_adapter import get_observation_adapter
+from utils import get_vehicle_start_at_time
 
 from smarts.core.smarts import SMARTS
 from smarts.core.agent import AgentSpec
@@ -61,9 +62,7 @@ class MATrafficSim:
         info = {}
 
         for k in observations.keys():
-            observations[k] = self.agent_spec.observation_adapter(
-                observations[k]
-            )
+            observations[k] = self.agent_spec.observation_adapter(observations[k])
 
         dones["__all__"] = all(dones.values())
 
@@ -74,7 +73,7 @@ class MATrafficSim:
             info,
         )
 
-    def reset(self):
+    def reset(self, internal_replacement=False, min_successor_time=5.0):
         if self.vehicle_itr + self.n_agents >= (len(self.vehicle_ids) - 1):
             self.vehicle_itr = 0
 
@@ -90,31 +89,52 @@ class MATrafficSim:
         for i in range(self.n_agents):
             self.agentid_to_vehid[f"agent_{i}"] = self.vehicle_id[i]
 
-        agent_interfaces = {}
         history_start_time = self.vehicle_missions[self.vehicle_id[0]].start_time
-        for agent_id in self.agent_ids:
-            vehicle = self.agentid_to_vehid[agent_id]
-            agent_interfaces[agent_id] = self.agent_spec.interface
-            if history_start_time > self.vehicle_missions[vehicle].start_time:
-                history_start_time = self.vehicle_missions[vehicle].start_time
+        agent_interfaces = {a_id: self.agent_spec.interface for a_id in self.agent_ids}
 
-        traffic_history_provider.start_time = history_start_time
+        if internal_replacement:
+            # NOTE(zbzhu): we use the first-end vehicle to compute the end time since we want to make sure all vehicles can exist on the map
+            history_end_time = min(
+                [
+                    self.scenario.traffic_history.vehicle_final_exit_time(v_id)
+                    for v_id in self.vehicle_id
+                ]
+            )
+            alive_time = history_end_time - history_start_time
+            traffic_history_provider.start_time = (
+                history_start_time
+                + np.random.choice(
+                    max(0, round(alive_time * 10) - round(min_successor_time * 10))
+                )
+                / 10
+            )
+            traffic_history_provider.start_time = history_start_time + alive_time
+        else:
+            traffic_history_provider.start_time = history_start_time
+
         ego_missions = {}
         for agent_id in self.agent_ids:
-            vehicle = self.agentid_to_vehid[agent_id]
+            vehicle_id = self.agentid_to_vehid[agent_id]
+            start_time = max(
+                0,
+                self.vehicle_missions[vehicle_id].start_time
+                - traffic_history_provider.start_time,
+            )
             ego_missions[agent_id] = replace(
-                self.vehicle_missions[vehicle],
-                start_time=self.vehicle_missions[vehicle].start_time
-                - history_start_time,
+                self.vehicle_missions[vehicle_id],
+                start_time=start_time,
+                start=get_vehicle_start_at_time(
+                    vehicle_id,
+                    traffic_history_provider.start_time,
+                    self.scenario.traffic_history,
+                ),
             )
         self.scenario.set_ego_missions(ego_missions)
         self.smarts.switch_ego_agents(agent_interfaces)
 
         observations = self.smarts.reset(self.scenario)
         for k in observations.keys():
-            observations[k] = self.agent_spec.observation_adapter(
-                observations[k]
-            )
+            observations[k] = self.agent_spec.observation_adapter(observations[k])
         self.vehicle_itr += self.n_agents
 
         return observations
@@ -143,7 +163,7 @@ class MATrafficSim:
 
 
 if __name__ == "__main__":
-    """ Dummy Rollout """
+    """Dummy Rollout"""
     env = MATrafficSim(["./ngsim"], agent_number=5)
     obs = env.reset()
     done = {}

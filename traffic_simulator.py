@@ -1,6 +1,8 @@
 import numpy as np
 from dataclasses import replace
+
 from example_adapter import get_observation_adapter
+from utils import get_vehicle_start_at_time
 
 from smarts.core.smarts import SMARTS
 from smarts.core.agent import AgentSpec
@@ -66,7 +68,7 @@ class TrafficSim:
             },
         )
 
-    def reset(self):
+    def reset(self, internal_replacement=False, min_successor_time=5.0):
         if self.vehicle_itr >= len(self.vehicle_ids):
             self.vehicle_itr = 0
 
@@ -77,9 +79,35 @@ class TrafficSim:
             TrafficHistoryProvider
         )
         assert traffic_history_provider
-        traffic_history_provider.start_time = vehicle_mission.start_time
 
-        modified_mission = replace(vehicle_mission, start_time=0.0)
+        if internal_replacement:
+            end_time = self.scenario.traffic_history.vehicle_final_exit_time(
+                self.vehicle_id
+            )
+            alive_time = end_time - vehicle_mission.start_time
+
+            if alive_time <= 0:
+                raise ValueError(vehicle_mission.start_time, end_time, alive_time)
+
+            traffic_history_provider.start_time = (
+                vehicle_mission.start_time
+                + np.random.choice(
+                    max(0, round(alive_time * 10) - round(min_successor_time * 10))
+                )
+                / 10
+            )
+        else:
+            traffic_history_provider.start_time = vehicle_mission.start_time
+
+        modified_mission = replace(
+            vehicle_mission,
+            start_time=0.0,
+            start=get_vehicle_start_at_time(
+                self.vehicle_id,
+                traffic_history_provider.start_time,
+                self.scenario.traffic_history,
+            ),
+        )
         self.scenario.set_ego_missions({self.vehicle_id: modified_mission})
         self.smarts.switch_ego_agents({self.vehicle_id: self.agent_spec.interface})
 

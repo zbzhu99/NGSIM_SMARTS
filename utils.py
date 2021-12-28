@@ -29,7 +29,9 @@ import numpy as np
 from collections import namedtuple
 
 from smarts.core.sensors import Observation
-from smarts.core.utils.math import vec_2d
+from smarts.core.utils.math import vec_2d, radians_to_vec
+from smarts.core.plan import Start
+from smarts.core.coordinates import Heading
 
 
 Config = namedtuple(
@@ -317,3 +319,16 @@ def get_observation_adapter(observation_space, **kwargs):
         return obs
 
     return observation_adapter
+
+
+def get_vehicle_start_at_time(vehicle_id, start_time, traffic_history):
+    pphs = traffic_history.vehicle_pose_at_time(vehicle_id, start_time)
+    assert pphs
+    pos_x, pos_y, heading, speed = pphs
+    veh_length, veh_width, veh_height = traffic_history.vehicle_size(str(vehicle_id))
+    # missions start from front bumper, but pos is center of vehicle
+    hhx, hhy = radians_to_vec(heading) * (0.5 * veh_length)
+    return Start(
+        (pos_x + hhx, pos_y + hhy),
+        Heading(heading),
+    )
