@@ -125,7 +125,10 @@ class MATrafficSim:
                 start_time=start_time,
                 start=get_vehicle_start_at_time(
                     vehicle_id,
-                    traffic_history_provider.start_time,
+                    max(
+                        traffic_history_provider.start_time,
+                        self.vehicle_missions[vehicle_id].start_time,
+                    ),
                     self.scenario.traffic_history,
                 ),
             )
