@@ -73,7 +73,7 @@ class MATrafficSim:
             info,
         )
 
-    def reset(self, internal_replacement=False, min_successor_time=5.0):
+    def reset(self, internal_replacement=True, min_successor_time=5.0):
         if self.vehicle_itr + self.n_agents >= (len(self.vehicle_ids) - 1):
             self.vehicle_itr = 0
 
@@ -124,9 +124,12 @@ class MATrafficSim:
                 start_time=start_time,
                 start=get_vehicle_start_at_time(
                     vehicle_id,
-                    max(
-                        traffic_history_provider.start_time,
-                        self.vehicle_missions[vehicle_id].start_time,
+                    round(
+                        max(
+                            traffic_history_provider.start_time,
+                            self.vehicle_missions[vehicle_id].start_time,
+                        ),
+                        1,
                     ),
                     self.scenario.traffic_history,
                 ),
@@ -168,8 +171,8 @@ if __name__ == "__main__":
     """Dummy Rollout"""
     env = MATrafficSim(["./ngsim"], agent_number=5)
     obs = env.reset()
-    done = {}
-    n_steps = 10
+    done = {a_id: False for a_id in obs.keys()}
+    n_steps = 100000
     for step in range(n_steps):
         act_n = {}
         for agent_id in obs.keys():
@@ -177,6 +180,10 @@ if __name__ == "__main__":
                 continue
             act_n[agent_id] = np.random.normal(0, 1, size=(2,))
         obs, rew, done, info = env.step(act_n)
+        if done["__all__"]:
+            print("done")
+            obs = env.reset()
+            done = {a_id: False for a_id in obs.keys()}
         print(rew)
     print("finished")
     env.close()
