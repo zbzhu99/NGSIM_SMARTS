@@ -73,7 +73,7 @@ class MATrafficSim:
             info,
         )
 
-    def reset(self, internal_replacement=True, min_successor_time=5.0):
+    def reset(self, internal_replacement=False, min_successor_time=5.0):
         if self.vehicle_itr + self.n_agents >= (len(self.vehicle_ids) - 1):
             self.vehicle_itr = 0
 
